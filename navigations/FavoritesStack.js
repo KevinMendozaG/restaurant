@@ -1,17 +1,16 @@
 import React from 'react'
 import { createStackNavigator } from "@react-navigation/stack";
-
-import Search from '../Search';
+import Favorites from '../screens/Favorites';
 
 const Stack = createStackNavigator()
 
-export default function SearchStack() {
+export default function FavoritesStack() {
     return (
         <Stack.Navigator>
             <Stack.Screen
-                name= "search"
-                component={Search}
-                options={{title:"Buscar"}}
+                name= "favorites"
+                component={Favorites}
+                options={{title:"Favoritos"}}
             />
         </Stack.Navigator>
     )
