@@ -2,14 +2,14 @@ import React from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs'
 import { Icon } from 'react-native-elements';
-import { color } from 'react-native-reanimated';
+
 
 import RestaurantsStack from './RestaurantsStack';
 import FavoritesStack from './FavoritesStack';
 import TopRestaurantsStack from './TopRestaurantsStack';
 import SearchStack from './SearchStack';
 import AccountsStack from './AccountStack';
-import Restaurants from '../screens/Restaurants';
+
 
 
 
