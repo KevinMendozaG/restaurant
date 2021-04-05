@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { StyleSheet, Text, View, ScrollView, Alert, Dimensions } from 'react-native'
 import { Avatar, Button, Icon, Input, Image } from 'react-native-elements'
+import { map, size, filter, isEmpty } from 'lodash'
 import CountryPicker from 'react-native-country-picker-modal'
-import { map, size, filter } from 'lodash'
 import MapView from 'react-native-maps'
+import uuid from 'random-uuid-v4'
 
-import { getCurrentLocation, loadImageFromGallery } from '../../utils/helpers'
+import { getCurrentLocation, loadImageFromGallery, validateEmail } from '../../utils/helpers'
 import Modal from '../../components/Modal'
+import { addDocumentWithoutId, getCurrentUser, uploadImage } from '../../utils/actions'
 
 
 const widthScreen = Dimensions.get("window").width
@@ -22,9 +24,87 @@ export default function AddRestaurantForm({ toastRef, setLoading, navigation }) 
     const [isVisibleMap, setIsVisibleMap] = useState(false)
     const [locationRestaurant, setLocationRestaurant] = useState(null)
 
-    const addRestaurant = () =>{
-        console.log(formData)
-        console.log("Fuck Yeah!!!")
+    const addRestaurant = async() =>{
+        if (!validForm()){
+            return
+        }
+
+        setLoading(true)
+        const responseUploadImages = await uploadImages()
+        const restaurant = {
+            name: formData.name,
+            address: formData.address,
+            description: formData.description,
+            callingCode: formData.callingCode,
+            phone: formData.phone,
+            location: locationRestaurant,
+            images: responseUploadImages,
+            rating: 0,
+            ratingTotal: 0,
+            quantityVoting: 0,
+            createAt: new Date(),
+            createBy: getCurrentUser().uid
+        }
+        const responseAddDocument = await addDocumentWithoutId("restaurants", restaurant)
+        setLoading(false)
+        if(!responseAddDocument.statusResponse){
+            toastRef.current.show("Error al guardar el restaurante, por favor intenta más tarde.", 3000)
+        }
+        navigation.navigate("restaurants")
+    }
+    const uploadImages = async() => {
+        const imagesUrl = []
+        await Promise.all(
+            map(imagesSelected, async(image) =>{
+                const response = await uploadImage(image, "restaurants", uuid())
+                if (response.statusResponse) {
+                    imagesUrl.push(response.url)
+                }
+            })
+        )
+        return imagesUrl
+    }
+
+    const validForm = () => {
+        clearErrors()
+        let isValid = true
+
+        if(isEmpty(formData.name)){
+            setErrorName("Debes ingresar el nombre del restaurante.")
+            isValid = false
+        }
+        if(isEmpty(formData.address)){
+            setErrorAddress("Debes ingresar la dirección del restaurante.")
+            isValid = false
+        }
+        if(!validateEmail(formData.email)){
+            setErrorEmail("Debes ingresar un email de restaurante valido.")
+            isValid = false
+        }
+        if(size(formData.phone)< 10){
+            setErrorPhone("Debes ingresar un teléfono de restaurante valido.")
+            isValid = false
+        }
+        if(isEmpty(formData.description)){
+            setErrorDescription("Debes ingresar una descripción del restaurante.")
+            isValid = false
+        }
+        if(!locationRestaurant){
+            toastRef.current.show("Debes de localizar eñ restaurante en el mapa.", 3000)
+            isValid = false
+        }else if(size(imagesSelected)===0) {
+            toastRef.current.show("Debes de agregar al menos una imagen al restaurante.", 3000)
+            isValid = false
+        }
+        return isValid
+    }
+
+    const clearErrors = () => {
+        setErrorDescription(null)
+        setErrorEmail(null)
+        setErrorName(null)
+        setErrorPhone(null)
+        setErrorAddress(null)
     }
 
     return (
@@ -56,7 +136,6 @@ export default function AddRestaurantForm({ toastRef, setLoading, navigation }) 
             <MapRestaurant
                 isVisibleMap={isVisibleMap}
                 setIsVisibleMap={setIsVisibleMap}
-                locationRestaurant= {locationRestaurant}
                 setLocationRestaurant={setLocationRestaurant}
                 toastRef={toastRef}
             />
@@ -64,7 +143,7 @@ export default function AddRestaurantForm({ toastRef, setLoading, navigation }) 
     )
 }
 
-function MapRestaurant ({ isVisibleMap, setIsVisibleMap, locationRestaurant, setLocationRestaurant, toastRef}) {
+function MapRestaurant ({ isVisibleMap, setIsVisibleMap, setLocationRestaurant, toastRef}) {
     const [newRegion, setNewRegion] = useState(null)
     useEffect(() => {
         (async() => {
